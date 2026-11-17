@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {createAsrChoice} from '../assets/app/public/asr-choice.js';
+const selector = () => ({value:'small', options:[{value:'tiny'},{value:'small'}], addEventListener(_, cb){this.change=cb;}});
+const select=selector(), update=createAsrChoice(select);
+update({state:'loading',defaultModel:'small'});
+update({state:'ready',defaultModel:'tiny'});
+assert.equal(select.value,'tiny', 'tiny-only installation must be selected after loading');
+select.value='small';select.change();update({state:'ready',defaultModel:'tiny'});
+assert.equal(select.value,'small','polling must preserve manual choice');
+const manual=selector(), refresh=createAsrChoice(manual);
+manual.change();refresh({state:'ready',defaultModel:'tiny'});
+assert.equal(manual.value,'small','manual choice during loading must be preserved');
+const unavailable=selector(), later=createAsrChoice(unavailable);
+later({state:'unavailable'});later({state:'ready',defaultModel:'unknown'});
+assert.equal(unavailable.value,'small');
+later({state:'ready',defaultModel:'tiny'});assert.equal(unavailable.value,'tiny');
+console.log('PASS: available ASR defaults, delayed readiness, explicit user choice');
