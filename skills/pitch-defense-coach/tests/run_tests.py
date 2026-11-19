@@ -4,7 +4,7 @@ import subprocess,sys,tempfile,json,base64,importlib.util,unittest,shutil,hashli
 
 SKILL=Path(__file__).resolve().parents[1]
 def run(script,*args,ok=True):
- r=subprocess.run([sys.executable,'-X','utf8',str(SKILL/'scripts'/script),*map(str,args)],capture_output=True,text=True,encoding='utf-8')
+ r=subprocess.run([sys.executable,'-X','utf8',str(SKILL/'scripts'/script),*map(str,args)],input='',capture_output=True,text=True,encoding='utf-8')
  if ok and r.returncode:raise RuntimeError(r.stderr)
  return r
 def main():
@@ -39,6 +39,12 @@ def main():
   spec=importlib.util.spec_from_file_location('flow_tests',SKILL/'tests/test_server.py');mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
   result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromModule(mod))
   if not result.wasSuccessful():raise RuntimeError('API tests failed')
+  spec=importlib.util.spec_from_file_location('speech_tests',SKILL/'tests/test_speech_resources.py');mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+  result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromModule(mod))
+  if not result.wasSuccessful():raise RuntimeError('Speech resource tests failed')
+  confirmation=run('setup_optional.py','--app',app,'--asr','tiny')
+  assert json.loads(confirmation.stdout)['state']=='confirmation_required'
+  assert not (app/'.venv').exists()
   for path in SKILL.rglob('*.py'):compile(path.read_text(encoding='utf-8'),str(path),'exec')
   print('PASS: isolated bootstrap, overwrite protection, optional setup check, ordered slide import/archive, 600s deadline, session recovery, missing-ASR fallback, API lifecycle and origin guards')
 if __name__=='__main__':main()

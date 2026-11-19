@@ -1,23 +1,25 @@
 import io,threading,time,uuid,re,json
 from pathlib import Path
+from speech_resources import model_paths, complete_model, configured
 
 
 class Engine:
  def __init__(self,root):
   self.root=Path(root);self.models={};self.lock=threading.Lock();self.jobs={};self.jobs_lock=threading.Lock()
+  self.paths=model_paths(root)
   config=json.loads((self.root/'public/glossary.json').read_text(encoding='utf-8'))
   self.terms=config.get('terms',[]);self.suggestions=config.get('suggestions',{})
   self.status={'state':'loading','detail':'本机中文模型正在加载','defaultModel':'small','terms':self.terms}
  def load(self):
   try:
-   name='small' if (self.root/'models/whisper-small/model.bin').exists() else 'tiny'
+   name=configured(self.root).get('defaultModel') or ('small' if complete_model(self.paths['small']) else 'tiny')
    self.model(name);self.status.update(state='ready',defaultModel=name,detail='准确优先模型已就绪 · 支持专业词提示' if name=='small' else '快速模型已就绪 · 准确优先模型尚未安装')
-  except Exception as e:self.status.update(state='unavailable',detail='语音模型暂不可用：'+str(e)[:160])
+  except Exception as e:self.status.update(state='unavailable',needsSetup=True,detail='语音环境尚未就绪，可选择安装/修复或继续文字训练。',diagnostic=str(e)[:160])
  def model(self,name):
   if name not in ['small','tiny']:raise ValueError('请选择准确优先或快速转写')
   if name not in self.models:
    from faster_whisper import WhisperModel
-   path=self.root/'models'/('whisper-'+name)
+   path=self.paths[name]
    if not (path/'model.bin').exists():raise ValueError('该本机模型尚未安装')
    self.models[name]=WhisperModel(str(path),device='cpu',compute_type='int8',cpu_threads=4,local_files_only=True)
   return self.models[name]

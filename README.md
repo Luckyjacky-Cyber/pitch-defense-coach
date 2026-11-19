@@ -134,6 +134,14 @@ python install.py
 
 另附公开总决赛片段的 [案例观察](skills/pitch-defense-coach/references/case-driven-coaching.md) 与 [讲述标准](skills/pitch-defense-coach/references/performance-standards.md)，标明抽样位置、AI 字幕误差，不充当官方评分规则。
 
+## 语音模型自动检测与跨平台使用
+
+首次运行会先检查本机已有的兼容模型和运行环境，实际加载成功后直接复用。没找到时，页面弹出**安装准确版 / 安装快速版 / 暂不安装**，由当前AI在你确认后完成安装；文字训练照常可用。下载Skill本身不会自动执行安装。
+
+模型可以跨项目、跨本机Agent复用；共享的是模型和环境路径，不共享项目材料与训练记录。其他Agent需要能够运行本机Python、访问文件并打开浏览器。纯聊天或云端容器不能直接使用你电脑上的模型和摄像头，不能视为即装即用。
+
+[查看检测范围、安装确认与平台条件](skills/pitch-defense-coach/references/speech-portability.md)。当前已在Windows验证，macOS/Linux尚未实机验证。
+
 ## 本机训练室
 
 ![训练室功能示意，非真实项目截图](docs/assets/training-room.svg)
@@ -166,7 +174,7 @@ python skills/pitch-defense-coach/scripts/import_slides.py --app local-projects/
 
 ```bash
 python skills/pitch-defense-coach/scripts/setup_optional.py --app local-projects/my-project --vision
-python skills/pitch-defense-coach/scripts/setup_optional.py --app local-projects/my-project --asr tiny
+python skills/pitch-defense-coach/scripts/setup_optional.py --app local-projects/my-project --asr tiny --yes --register
 python local-projects/my-project/launch.py --roadshow
 ```
 

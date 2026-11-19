@@ -1,3 +1,4 @@
+import {createSpeechSetup} from './speech-setup.js';
 import {loadVision,errorText} from './vision.js';
 import {createAsrChoice} from './asr-choice.js';
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -6,6 +7,7 @@ let replayUrl=null;
 const updateAsrChoice=createAsrChoice($('#asrModel'));
 let activeTiming=false,localRemaining=600,lastSync=performance.now(),renderRevision=-1;
 const api=async(path,data)=>{const r=await fetch('/api/'+path,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});const v=await r.json();if(!r.ok)throw new Error(v.error||'请求失败');return v;};
+const updateSpeechSetup=createSpeechSetup(api,$('#audioStatus'));
 const notice=s=>$('#notice').textContent=s;
 const save=(filename,text,type='text/plain;charset=utf-8')=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
 const labelTime=ms=>(ms/1000).toFixed(1)+'秒';
@@ -106,7 +108,7 @@ async function submitAnswer(finish=false){
 }
 function resetAnswer(q){if(replayUrl)URL.revokeObjectURL(replayUrl);replayUrl=null;$('#replay').removeAttribute('src');$('#asrReview').hidden=true;qid=q.id;answerStart=0;originalTranscript='';audioSegments=[];events=[];cameraResult={};$('#answer').value='';$('#eventReview').hidden=true;$('#recordStatus').textContent='可录音后检查转写，也可直接输入';$('#recordBtn').textContent='开始录音';notice('');}
 function render(s){
- updateAsrChoice(s.asr);
+ updateAsrChoice(s.asr);updateSpeechSetup(s.asr);
  const previousId=session?.id;state=s;session=s.session;if(previousId!==session?.id)qid=null;localRemaining=s.remaining??600;lastSync=performance.now();activeTiming=session?.status==='answering';
  $('#audioStatus').textContent=s.asr.detail;$('#coachStatus').textContent=s.coachOnline?'教练已连接':'等待当前聊天接入';
  if(!session){show('setup');return;}

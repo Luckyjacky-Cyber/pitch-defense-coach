@@ -33,6 +33,13 @@ class Flow(unittest.TestCase):
  def test_origin_and_paths(self):
   for path,headers in [('/api/state',{'Origin':'https://other.example'}),('/../server.py',{}),('/%2e%2e/server.py',{})]:
    with self.assertRaises(urllib.error.HTTPError):urllib.request.urlopen(urllib.request.Request(self.url+path,headers=headers))
+ def test_speech_install_choice_is_explicit_and_does_not_install(self):
+  for choice in ['skip','small','tiny']:
+   result=self.post('/api/asr/setup-choice',{'choice':choice})
+   self.assertEqual(result['status'],'skipped' if choice=='skip' else 'requested')
+   self.assertEqual(s.snapshot()['speechSetup']['choice'],choice)
+  self.assertFalse((s.ROOT/'.venv').exists())
+  with self.assertRaises(urllib.error.HTTPError):self.post('/api/asr/setup-choice',{'choice':'run arbitrary command'})
  def test_untimed_and_independent_clocks(self):
   st=self.post('/api/start',{'minutes':10,'timingMode':'untimed','practiceGoal':'证据范围'});sid=st['session']['id']
   self.assertIsNone(st['remaining'])

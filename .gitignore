@@ -26,3 +26,6 @@ local-projects/
 tmp/
 .DS_Store
 Thumbs.db
+
+# Machine-specific speech locations, never publish
+speech-resources.json

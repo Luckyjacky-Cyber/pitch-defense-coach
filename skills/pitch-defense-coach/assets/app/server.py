@@ -3,7 +3,9 @@ from pathlib import Path
 import json,sys,time,uuid,threading,io,mimetypes,argparse,os,math,copy
 
 ROOT=Path(__file__).resolve().parent
-sys.path.insert(0,str(ROOT/'runtime'))
+from speech_resources import activate
+if __name__=='__main__':activate(ROOT)
+sys.path.append(str(ROOT/'runtime'))
 PUBLIC=ROOT/'public'; DATA=ROOT/'data';DATA.mkdir(exist_ok=True)
 LOCK=threading.RLock(); CHANGED=threading.Condition(LOCK)
 KNOWLEDGE=json.loads((PUBLIC/'knowledge.json').read_text(encoding='utf8'))
@@ -43,7 +45,11 @@ def touch():
  CHANGED.notify_all()
 
 def snapshot():
- return {'appId':'pitch-defense-coach-v1','instanceRoot':str(ROOT),'revision':REV,'session':SESSION,'remaining':max(0,SESSION['duration']-elapsed(SESSION)) if SESSION and SESSION.get('duration') is not None else None,'elapsed':elapsed(SESSION) if SESSION else 0,'asr':ASR,'coachOnline':time.time()-COACH_SEEN<50}
+ return {'appId':'pitch-defense-coach-v1','instanceRoot':str(ROOT),'revision':REV,'session':SESSION,'remaining':max(0,SESSION['duration']-elapsed(SESSION)) if SESSION and SESSION.get('duration') is not None else None,'elapsed':elapsed(SESSION) if SESSION else 0,'asr':ASR,'speechSetup':speech_choice(),'coachOnline':time.time()-COACH_SEEN<50}
+
+def speech_choice():
+ try:return json.loads((DATA/'speech-setup-choice.json').read_text(encoding='utf-8'))
+ except (OSError,ValueError):return None
 
 def expire():
  if SESSION and SESSION['status']=='answering' and timed_out(SESSION):
@@ -154,6 +160,13 @@ class Handler(BaseHTTPRequestHandler):
   if not self.headers.get('Content-Type','').startswith('application/json'):return self.reply({'error':'JSON required'},415)
   try:
    payload=json.loads(body)
+   if self.path=='/api/asr/setup-choice':
+    choice=payload.get('choice')
+    if choice not in ['small','tiny','skip']:raise ValueError('安装选择无效')
+    record={'choice':choice,'at':time.time(),'status':'skipped' if choice=='skip' else 'requested','note':'仅记录选择；安装由当前AI或本机终端执行，尚未安装。'}
+    with CHANGED:
+     (DATA/'speech-setup-choice.json').write_text(json.dumps(record,ensure_ascii=False),encoding='utf-8');touch()
+    return self.reply(record)
    if self.path.startswith('/api/roadshow/'):
     action=self.path.rsplit('/',1)[-1];sid=payload.get('sessionId')
     if action=='handoff':return self.reply(handoff(payload))

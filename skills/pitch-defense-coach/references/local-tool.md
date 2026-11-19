@@ -15,15 +15,19 @@ bootstrap拒绝覆盖任何现有目录。每个项目用独立工作目录。�
 
 ## 按需安装
 
+语音先按 [发现与复用流程](speech-portability.md) 检查，不重复下载安装。直接启动server.py也会离线检测；找到已验证的环境会复用。网页未就绪时弹出安装/跳过选择，由当前Agent执行用户确认的安装。
+
 ```text
 python <skill>/scripts/setup_optional.py --app <app> --check
 python <skill>/scripts/setup_optional.py --app <app> --vision
-python <skill>/scripts/setup_optional.py --app <app> --asr tiny
+python <skill>/scripts/setup_optional.py --app <app> --asr tiny --yes --register
 ```
+
+`--yes`仅在用户已同意安装后使用；无该参数且非交互时只返回确认请求。
 
 视觉文件下载到 `<app>/public/vendor`、`public/models`。语音依赖安装到独立 `.venv`，Whisper模型下载到 `<app>/models`，不会升级系统Python。tiny较快，small通常更准但CPU转写更慢、占用更多空间；口音和术语仍需校对。首次安装需要联网；仅下载工具模型，不上传项目材料。使用small可把最后一行的tiny改为small。
 
-安装语音后用 `.venv/Scripts/python.exe server.py`（Windows）或 `.venv/bin/python server.py`（macOS/Linux）启动；launch.py自动优先用此虚拟环境。初始化返回下载成功不等于可识别人脸/语音，启动后仍需用户实际测试。
+推荐使用 `python launch.py` 启动；启动检测会选择已验证的解释器和模型。新安装的依赖保存在实例`.venv`中，复用的环境则保持在原位置。初始化返回下载成功不等于可识别人脸/语音，启动后仍需用户实际测试。
 
 ## 导入PPT
 

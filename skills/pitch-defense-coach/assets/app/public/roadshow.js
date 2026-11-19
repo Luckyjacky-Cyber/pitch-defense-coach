@@ -1,10 +1,12 @@
+import {createSpeechSetup} from './speech-setup.js';
 import {loadVision,errorText} from './vision.js';
 import {createAsrChoice} from './asr-choice.js';
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=async(p,data)=>{const r=await fetch('/api/'+p,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});const j=await r.json();if(!r.ok)throw Error(j.error||'请求失败');return j;};
+const updateSpeechSetup=createSpeechSetup(api,$('#asrStatus'));
 let cameraBusy=false;
 const updateAsrChoice=createAsrChoice($('#model'));
-function renderAsr(status){$('#asrStatus').textContent=status.detail;updateAsrChoice(status);}
+function renderAsr(status){$('#asrStatus').textContent=status.detail;updateAsrChoice(status);updateSpeechSetup(status);}
 setInterval(async()=>{if(session?.status==='running'||jobBusy)return;try{renderAsr((await api('state')).asr);}catch{}},3000);
 let deck,session,page=1,syncAt=0,syncElapsed=0,rec,mic,cam,vision,origin=0,audioOffset=0,parts=[],blob,url,events=[],coverage=[],ending=false,starting=false,navigating=false,jobBusy=false,jobRendered=false,renderKey='',warned=false,audioContext;
 const say=t=>$('#notice').textContent=t, fmt=seconds=>`${String(Math.floor(Math.max(0,seconds)/60)).padStart(2,'0')}:${String(Math.floor(Math.max(0,seconds)%60)).padStart(2,'0')}`;

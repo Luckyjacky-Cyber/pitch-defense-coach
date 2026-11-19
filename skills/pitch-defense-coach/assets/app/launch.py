@@ -16,7 +16,7 @@ def main():
   options={'creationflags':subprocess.CREATE_NO_WINDOW} if sys.platform=='win32' else {'start_new_session':True}
   with (root/'server.log').open('a',encoding='utf-8') as log:
    subprocess.Popen([str(py) if py.exists() else sys.executable,str(root/'server.py'),'--port',str(a.port)],cwd=root,stdout=log,stderr=log,**options)
-  for i in range(50):
+  for i in range(300):
    if alive():break
    time.sleep(.2)
   else:raise RuntimeError('启动失败。查看server.log，或在终端运行 python server.py。')
