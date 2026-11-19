@@ -1,5 +1,6 @@
 from pathlib import Path
 import json,time,uuid,threading,math
+from competition import resolve_profile
 
 class RoadshowStore:
  def __init__(self,root,clock=time.time):
@@ -28,11 +29,16 @@ class RoadshowStore:
    if mode not in ['timed','untimed']:raise ValueError('计时模式无效')
    page=payload.get('startPage',1) if mode=='untimed' else 1
    if type(page)!=int or not 1<=page<=len(self.deck['slides']):raise ValueError('起始页无效')
-   minutes=payload.get('defenseMinutes',5)
+   profile=resolve_profile(self.root,payload.get('competitionProfile'))
+   road_minutes=payload.get('roadshowMinutes',profile['roadshowMinutes'])
+   if type(road_minutes)!=int or not 1<=road_minutes<=30:raise ValueError('路演时长需为1—30分钟')
+   minutes=payload.get('defenseMinutes',profile['defenseMinutes'])
    if type(minutes)!=int or not 1<=minutes<=30:raise ValueError('答辩时长需为1—30分钟')
    if type(payload.get('chainDefense',False))!=bool:raise ValueError('串联选项无效')
    if self.current:(self.data/f"roadshow-{self.current['id']}.json").write_text(json.dumps(self.current,ensure_ascii=False,indent=2),encoding='utf8')
    self.current={'id':uuid.uuid4().hex[:12],'source':self.deck['source'],'sourceHash':self.deck['sha256'],'startedAt':self.clock()*1000,'status':'running','timingMode':mode,'practiceGoal':str(payload.get('practiceGoal',''))[:500],'chainDefense':payload.get('chainDefense',False),'defenseMinutes':minutes,'linkedDefenseId':None,'limitSeconds':600 if mode=='timed' else None,'page':page,'visits':[{'page':page,'startMs':0,'endMs':None}],'elapsedMs':0,'transcription':None,'jobId':None,'audioOffsetMs':0,'events':[],'camera':{},'report':None,'capabilities':payload.get('capabilities',{})}
+   self.current['limitSeconds']=road_minutes*60 if mode=='timed' else None
+   self.current['competition']=profile
    self.save();return self.state()
  def reset(self,sid):
   with self.lock:

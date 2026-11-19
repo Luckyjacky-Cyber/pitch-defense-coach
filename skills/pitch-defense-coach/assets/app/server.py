@@ -9,6 +9,7 @@ LOCK=threading.RLock(); CHANGED=threading.Condition(LOCK)
 KNOWLEDGE=json.loads((PUBLIC/'knowledge.json').read_text(encoding='utf8'))
 from asr_engine import Engine
 from roadshow_store import RoadshowStore
+from competition import resolve_profile
 ENGINE=Engine(ROOT); ASR=ENGINE.status; ROAD=RoadshowStore(ROOT)
 SESSION=None;REV=0; COACH_SEEN=0
 if (DATA/'current.json').exists():
@@ -55,9 +56,10 @@ def safe_text(v,n=8000):
 def new_session(payload,source=None):
  mode=payload.get('timingMode','timed')
  if mode not in ['timed','untimed']:raise ValueError('计时模式无效')
- minutes=payload.get('minutes',10)
+ profile=copy.deepcopy(source['competition']) if source and source.get('competition') else resolve_profile(ROOT,payload.get('competitionProfile'))
+ minutes=payload.get('minutes',profile['defenseMinutes'] if profile['id']!='project' else 10)
  if type(minutes)!=int or not 1<=minutes<=30:raise ValueError('时长需为1—30分钟')
- return {'id':uuid.uuid4().hex[:12],'created':time.time(),'duration':minutes*60 if mode=='timed' else None,'timingMode':mode,'elapsed':0,'activeSince':None,'status':'waiting_coach','summary':safe_text(payload.get('summary',''),6000),'focus':safe_text(payload.get('focus','balanced'),100),'practiceGoal':safe_text(payload.get('practiceGoal',''),500),'questions':[],'report':None,'candidateChains':[],'capabilities':payload.get('capabilities',{}),'sourceRoadshow':source}
+ return {'id':uuid.uuid4().hex[:12],'created':time.time(),'competition':profile,'ruleWeights':copy.deepcopy(profile['ruleWeights']),'duration':minutes*60 if mode=='timed' else None,'timingMode':mode,'elapsed':0,'activeSince':None,'status':'waiting_coach','summary':safe_text(payload.get('summary',''),6000),'focus':safe_text(payload.get('focus','balanced'),100),'practiceGoal':safe_text(payload.get('practiceGoal',''),500),'questions':[],'report':None,'candidateChains':[],'capabilities':payload.get('capabilities',{}),'sourceRoadshow':source}
 
 def handoff(payload):
  global SESSION
@@ -183,7 +185,7 @@ class Handler(BaseHTTPRequestHandler):
      q=safe_text(payload['text'],800)
      if q.count('？')+q.count('?')>1:raise ValueError('每次只问一个问题')
      dim=payload['dimension']
-     if dim not in KNOWLEDGE['ruleWeights']:raise ValueError('维度不匹配')
+     if dim not in SESSION.get('ruleWeights',KNOWLEDGE['ruleWeights']):raise ValueError('维度不匹配')
      if timed_out(SESSION):raise ValueError('本轮时间已结束')
      SESSION['questions'].append({'id':f"Q{len(SESSION['questions'])+1:02}",'text':q,'dimension':dim,'chainId':payload.get('chainId',''),'source':payload.get('source',''),'issuedAt':time.time(),'answer':None,'feedback':None})
      SESSION['candidateChains']=payload.get('candidateChains',SESSION['candidateChains'])
@@ -222,7 +224,8 @@ class Handler(BaseHTTPRequestHandler):
      report=payload['report']
      if len(report.get('priorities',[]))!=3:raise ValueError('需要三项具体改进')
      levels=report.get('dimensions',[])
-     if {v.get('name') for v in levels}!=set(KNOWLEDGE['ruleWeights']):raise ValueError('需要四维度证据等级')
+     weights=SESSION.get('ruleWeights',KNOWLEDGE['ruleWeights'])
+     if len(levels)!=len(weights) or {v.get('name') for v in levels}!=set(weights):raise ValueError('报告须覆盖本轮赛事的全部维度，且不能重复')
      if any(v.get('level') not in ['强','中','弱','缺失'] for v in levels):raise ValueError('等级无效')
      SESSION['report']=report;freeze(SESSION);SESSION['status']='reviewed'
     elif route=='/api/reset':

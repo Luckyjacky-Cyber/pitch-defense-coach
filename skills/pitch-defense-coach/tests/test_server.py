@@ -88,4 +88,33 @@ class Flow(unittest.TestCase):
   with urllib.request.urlopen(self.url+'/api/roadshow') as r:deck=json.load(r)['deck']
   for slide in deck['slides']:
    with urllib.request.urlopen(self.url+'/'+slide['image'].lstrip('/')) as r:self.assertEqual(r.status,200)
+ def test_sanchuang_clocks_handoff_and_rubric(self):
+  now=[1000.];s.ROAD.clock=lambda:now[0]
+  road=self.post('/api/roadshow/start',{'competitionProfile':'sanchuang-regular','chainDefense':True})['session']
+  self.assertEqual(road['limitSeconds'],480);self.assertEqual(road['defenseMinutes'],7)
+  now[0]+=479;self.assertEqual(s.ROAD.state()['session']['status'],'running')
+  now[0]+=1;self.assertEqual(s.ROAD.state()['session']['reason'],'timeout')
+  self.post('/api/roadshow/edit',{'sessionId':road['id'],'edits':[{'visit':0,'text':'测试：我们服务商户，收入来自服务费。'}]})
+  st=self.post('/api/roadshow/handoff',{'sessionId':road['id'],'confirmed':True});sid=st['session']['id']
+  self.assertEqual(st['remaining'],420);self.assertEqual(st['session']['sourceRoadshow']['elapsedMs'],480000)
+  self.assertEqual(len(st['session']['ruleWeights']),5)
+  with self.assertRaises(urllib.error.HTTPError):self.post('/api/coach/question',{'sessionId':sid,'text':'测试问题','dimension':'个人成长'})
+  self.post('/api/coach/question',{'sessionId':sid,'text':'服务费如何计算？','dimension':'创业'})
+  self.post('/api/answer',{'sessionId':sid,'questionId':'Q01','text':'需要核对账目。','finish':True})
+  self.post('/api/coach/feedback',{'sessionId':sid,'questionId':'Q01','feedback':{'content':'测试','logic':'测试','evidence':'待补账目','rewrite':'不编造','nonverbal':[]}})
+  report={'summary':'测试','dimensions':[{'name':n,'level':'缺失','basis':'本轮未覆盖'} for n in st['session']['ruleWeights']],'priorities':[{'action':'核对口径','practice':'重答两次','check':'口径一致','questionIds':['Q01']}]*3}
+  duplicate=dict(report,dimensions=report['dimensions']+[report['dimensions'][0]])
+  with self.assertRaises(urllib.error.HTTPError):self.post('/api/coach/report',{'sessionId':sid,'report':duplicate})
+  self.assertEqual(self.post('/api/coach/report',{'sessionId':sid,'report':report})['session']['status'],'reviewed')
+ def test_sanchuang_practical_untimed_and_validation(self):
+  st=self.post('/api/start',{'competitionProfile':'sanchuang-practical','timingMode':'untimed'})
+  self.assertIsNone(st['remaining']);self.assertEqual(len(st['session']['ruleWeights']),7)
+  self.post('/api/coach/question',{'sessionId':st['session']['id'],'text':'运营动作怎样留痕？','dimension':'创业过程'})
+  self.post('/api/end',{})
+  for invalid in [0,31,8.5,True,'8']:
+   with self.assertRaises(urllib.error.HTTPError):self.post('/api/roadshow/start',{'roadshowMinutes':invalid})
+  with self.assertRaises(urllib.error.HTTPError):self.post('/api/roadshow/start',{'competitionProfile':'unknown'})
+  road=self.post('/api/roadshow/start',{'competitionProfile':'sanchuang-practical','roadshowMinutes':6})['session']
+  self.assertEqual(road['limitSeconds'],360);self.assertFalse(road['chainDefense'])
+  self.assertEqual(s.RoadshowStore(s.ROOT).current['competition']['id'],'sanchuang-practical')
 if __name__=='__main__':unittest.main()

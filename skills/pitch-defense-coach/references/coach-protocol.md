@@ -30,11 +30,11 @@ report.json：
 {"sessionId":"实际ID","report":{"summary":"本轮优势与最重要缺口","dimensions":[{"name":"个人成长","level":"中","basis":"关联具体回答与证据"},{"name":"项目创新","level":"弱","basis":"同上"},{"name":"产业价值","level":"缺失","basis":"本轮未覆盖，不能推断没有价值"},{"name":"团队协作","level":"缺失","basis":"本轮未覆盖"}],"priorities":[{"action":"先说对照条件再报结论","practice":"用现有数据卡重答2遍，每遍45秒","check":"两遍均包含同一对照对象、单位和条件","questionIds":["Q01"]},{"action":"补一句本人具体贡献","practice":"以已有记录练30秒版本","check":"有本人动作和产出，非仅团队头衔","questionIds":["Q02"]},{"action":"缩短准备性开头","practice":"回听并删除重复引入，录制两遍","check":"首句10秒内给出核心回答","questionIds":["Q01"]}]}}
 ```
 
-恰好四个维度、三个实际适用的优先动作。不得照搬示例诊断。等级是训练证据充分度，不是官方分数；未问到的维度明确“本轮未覆盖”。
+维度名称与数量使用本轮 `session.ruleWeights`，旧轮次才回退到 `knowledge.ruleWeights`。三创赛常规赛5项、实战赛7项；上例仅为国创赛示范。恰好三个实际适用的优先动作。不得照搬示例诊断。等级是训练证据充分度，不是官方分数；未问到的维度明确“本轮未覆盖”。
 
 ## 路演
 
-GET `/api/roadshow` 读取当前session、deck、visits、转写和事件。完整路演600秒连续计时，`limitSeconds=null`则不计时专项；期间不提问。结束后转写，本机处理耗时不算路演时间。逐页分析要依据实际页访问和时间戳，跨页句子允许人工核对。串联答辩读取`sourceRoadshow`的已确认副本，不能以后来路演替换来源。模式与API见[训练模式](training-modes.md)。
+GET `/api/roadshow` 读取当前session、deck、visits、转写和事件。完整路演按本轮 `limitSeconds` 连续计时，`limitSeconds=null`则不计时专项；期间不提问。结束后转写，本机处理耗时不算路演时间。逐页分析要依据实际页访问和时间戳，跨页句子允许人工核对。串联答辩读取`sourceRoadshow`的已确认副本，不能以后来路演替换来源。模式与API见[训练模式](training-modes.md)。
 
 收到`practiceGoal`后围绕目标提问；不计时专项可在聊天逐题反馈，再用同题或换问法复练。计时模式一般结束后集中反馈。所有模式仍填写逐题反馈与最终报告；未覆盖维度注明本轮未覆盖，不能推断项目没有该优势。
 
